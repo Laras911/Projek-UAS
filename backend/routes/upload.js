@@ -1,14 +1,21 @@
+// backend/routes/upload.js
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const auth = require('../middleware/auth.js');
 
 const router = express.Router();
 
-// Konfigurasi penyimpanan
+// Pastikan folder uploads ada
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -20,33 +27,37 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (allowedTypes.includes(file.mimetype)) {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Hanya file gambar yang diizinkan'), false);
+      cb(new Error('Hanya file gambar yang diizinkan (JPEG, PNG, GIF, WebP)'), false);
     }
   }
 });
 
-// Upload gambar
-router.post('/', auth, upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: 'Tidak ada file yang diupload' });
-  }
-  const fileUrl = `/uploads/${req.file.filename}`;
-  res.json({ imageUrl: fileUrl });
-});
-
-// Error handler untuk multer
-router.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'FILE_TOO_LARGE') {
-      return res.status(400).json({ message: 'Ukuran file terlalu besar (maks 5MB)' });
+// Endpoint upload
+router.post('/', auth, (req, res) => {
+  upload.single('image')(req, res, function (err) {
+    if (err) {
+      // Tangani error dari multer
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'FILE_TOO_LARGE') {
+          return res.status(400).json({ message: 'Ukuran file terlalu besar (maks 5MB)' });
+        }
+        return res.status(400).json({ message: err.message });
+      } else if (err) {
+        return res.status(400).json({ message: err.message });
+      }
     }
-    return res.status(400).json({ message: err.message });
-  }
-  next(err);
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'Tidak ada file yang diupload' });
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ imageUrl: fileUrl });
+  });
 });
 
 module.exports = router;
