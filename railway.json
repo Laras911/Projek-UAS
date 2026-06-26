@@ -1,7 +1,7 @@
 {
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm install && npm rebuild sqlite3"
+    "buildCommand": "npm install"
   },
   "deploy": {
     "startCommand": "node server.js"
