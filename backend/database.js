@@ -36,8 +36,15 @@ if (process.env.DATABASE_URL) {
 
   console.log('✅ Terhubung ke PostgreSQL (production)');
 } else {
-  // ===== DEVELOPMENT: SQLite (tetap pakai sqlite3, tapi hanya di lokal) =====
-  const sqlite3 = require('sqlite3').verbose();
+  // ===== DEVELOPMENT: SQLite =====
+  let sqlite3;
+  try {
+    sqlite3 = require('sqlite3').verbose();
+  } catch (e) {
+    console.error('❌ sqlite3 tidak ditemukan. Install dengan npm install sqlite3 untuk development.');
+    process.exit(1);
+  }
+
   const sqliteDb = new sqlite3.Database(path.join(__dirname, 'barter.db'));
 
   db = {
@@ -48,7 +55,7 @@ if (process.env.DATABASE_URL) {
     close: sqliteDb.close.bind(sqliteDb)
   };
 
-  // Buat tabel SQLite (hanya untuk development)
+  // Buat tabel untuk development (jika perlu)
   db.serialize(() => {
     db.run(`
       CREATE TABLE IF NOT EXISTS users (
@@ -63,7 +70,7 @@ if (process.env.DATABASE_URL) {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    // ... tabel items dan trades
+    // tambahkan items dan trades jika diperlukan
   });
 
   console.log('✅ Terhubung ke SQLite (development)');
