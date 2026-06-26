@@ -40,4 +40,5 @@ if (process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+
 module.exports = db;

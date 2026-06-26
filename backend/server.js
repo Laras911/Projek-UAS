@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -25,3 +26,5 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
 });
+
+console.log('🔍 DATABASE_URL:', process.env.DATABASE_URL ? 'ADA ✅' : 'TIDAK ADA ❌');
