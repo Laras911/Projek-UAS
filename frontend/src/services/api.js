@@ -1,10 +1,8 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  baseURL: 'https://barter-backend-eku2.onrender.com/api',
+  headers: { 'Content-Type': 'application/json' }
 })
 
 // Interceptor untuk token

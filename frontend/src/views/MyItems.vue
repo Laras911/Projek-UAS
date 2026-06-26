@@ -3,7 +3,14 @@
     <!-- ===== SIDEBAR ===== -->
     <div class="sidebar">
       <div class="profile-card">
-        <div class="avatar-wrapper" @click="changeAvatar">
+        <input 
+          type="file" 
+          ref="avatarInput" 
+          @change="handleAvatarUpload" 
+          accept="image/*" 
+          style="display:none" 
+        />
+        <div class="avatar-wrapper" @click="$refs.avatarInput.click()">
           <img
             :src="authStore.user?.avatar || defaultAvatar"
             :key="authStore.user?.avatar || defaultAvatar"
@@ -575,6 +582,10 @@ const handleAvatarUpload = async (e) => {
   const url = await uploadFile(file)
   if (url) {
     editProfile.avatar = url
+    // Update langsung di store agar sidebar berubah
+    if (authStore.user) {
+      authStore.user.avatar = url
+    }
   }
   e.target.value = ''
 }

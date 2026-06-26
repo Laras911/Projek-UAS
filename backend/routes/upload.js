@@ -40,7 +40,6 @@ const upload = multer({
 router.post('/', auth, (req, res) => {
   upload.single('image')(req, res, function (err) {
     if (err) {
-      // Tangani error dari multer
       if (err instanceof multer.MulterError) {
         if (err.code === 'FILE_TOO_LARGE') {
           return res.status(400).json({ message: 'Ukuran file terlalu besar (maks 5MB)' });
@@ -55,7 +54,9 @@ router.post('/', auth, (req, res) => {
       return res.status(400).json({ message: 'Tidak ada file yang diupload' });
     }
 
-    const fileUrl = `/uploads/${req.file.filename}`;
+    // KEMBALIKAN URL ABSOLUT
+    const BASE_URL = process.env.BASE_URL || 'https://barter-backend-eku2.onrender.com';
+    const fileUrl = `${BASE_URL}/uploads/${req.file.filename}`;
     res.json({ imageUrl: fileUrl });
   });
 });
