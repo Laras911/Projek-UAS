@@ -1,28 +1,20 @@
 // backend/routes/upload.js
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
 const auth = require('../middleware/auth.js');
 
 const router = express.Router();
 
-// Pastikan folder uploads ada
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, unique + path.extname(file.originalname));
-  }
+// Konfigurasi Cloudinary dari environment variables
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Multer dengan memory storage (tidak simpan ke disk)
+const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
@@ -36,28 +28,45 @@ const upload = multer({
   }
 });
 
-// Endpoint upload
+// Endpoint upload ke Cloudinary
 router.post('/', auth, (req, res) => {
-  upload.single('image')(req, res, function (err) {
+  upload.single('image')(req, res, async function (err) {
     if (err) {
       if (err instanceof multer.MulterError) {
         if (err.code === 'FILE_TOO_LARGE') {
           return res.status(400).json({ message: 'Ukuran file terlalu besar (maks 5MB)' });
         }
         return res.status(400).json({ message: err.message });
-      } else if (err) {
-        return res.status(400).json({ message: err.message });
       }
+      return res.status(400).json({ message: err.message });
     }
 
     if (!req.file) {
       return res.status(400).json({ message: 'Tidak ada file yang diupload' });
     }
 
-    // KEMBALIKAN URL ABSOLUT
-    const BASE_URL = process.env.BASE_URL || 'https://barter-backend-eku2.onrender.com';
-    const fileUrl = `${BASE_URL}/uploads/${req.file.filename}`;
-    res.json({ imageUrl: fileUrl });
+    try {
+      // Upload buffer ke Cloudinary
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'barter-yuk', // folder di Cloudinary
+            resource_type: 'image'
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(req.file.buffer);
+      });
+
+      // Kirim URL publik ke frontend
+      res.json({ imageUrl: result.secure_url });
+    } catch (error) {
+      console.error('❌ Cloudinary upload error:', error);
+      res.status(500).json({ message: 'Gagal upload gambar ke Cloudinary' });
+    }
   });
 });
 
